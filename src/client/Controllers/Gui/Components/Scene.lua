@@ -66,24 +66,24 @@ local function Scene(props)
                     OnInput:Fire(New);
                 end;
             };
-        };
 
-        New "TextButton" {
-            Position = UDim2.fromScale(.5, .6);
-            Size = UDim2.fromScale(.35, .2);
-            AnchorPoint = Vector2.new(.5, .5);
-            BackgroundColor3 = Color3.fromRGB(30, 255, 0);
-            BorderColor3 = Color3.fromRGB(37, 219, 0);
-            BorderSizePixel = 3;
-            BorderMode = Enum.BorderMode.Outline;
-            Font = Enum.Font.Cartoon;
-            Text = 'Purchase';
-            TextScaled = true;
-
-            [OnEvent "Activated"] = function()
-                local ID = PurchaseValue:get();
-                MarketplaceService:PromptPurchase(game.Players.LocalPlayer, tonumber(ID));
-            end;
+            New "TextButton" {
+                Position = UDim2.fromScale(.5, .6);
+                Size = UDim2.fromScale(.35, .125);
+                AnchorPoint = Vector2.new(.5, .5);
+                BackgroundColor3 = Color3.fromRGB(30, 255, 0);
+                BorderColor3 = Color3.fromRGB(37, 219, 0);
+                BorderSizePixel = 3;
+                BorderMode = Enum.BorderMode.Outline;
+                Font = Enum.Font.Cartoon;
+                Text = 'Purchase';
+                TextScaled = true;
+    
+                [OnEvent "Activated"] = function()
+                    local ID = PurchaseValue:get();
+                    MarketplaceService:PromptPurchase(game.Players.LocalPlayer, tonumber(ID));
+                end;
+            };
         };
     };
 end;
