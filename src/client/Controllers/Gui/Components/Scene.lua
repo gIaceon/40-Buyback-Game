@@ -1,3 +1,9 @@
+local INFO_TEXT_FORMAT = 
+[[Name: %s
+Cost: R$%d 
+Discount: ~R$%d
+Cost After Discount: ~R$%d]];
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local MarketplaceService = game:GetService("MarketplaceService");
 
@@ -26,6 +32,7 @@ local function Scene(props)
     local Info = State(nil);
     local Mode = State(0);
     local ErrText = State'';
+    local InfoText = State'';
 
     OnInput:Connect(function(New: number)
         if (not New) then
@@ -34,9 +41,34 @@ local function Scene(props)
 
         PurchaseValue:set(New);
         
-        local info = MarketplaceService:GetProductInfo(New);
-        print(info);
+        -- local info = pcall(function()
+        --     return MarketplaceService:GetProductInfo(New);
+        -- end);
+        local done, returned = pcall(MarketplaceService.GetProductInfo, MarketplaceService, New);
+        local info = if done ~= false then returned else nil;
+        
         Info:set(info);
+
+        if (info) then
+            if (info.Creator and info.Creator.Id == 1) then
+                if (info.IsLimited or info.IsLimitedUnique) then
+                    InfoText:set('You cannot buy limited items in game.');
+                    return;
+                end;
+                local Cost = info.PriceInRobux or 0;
+                local GroupCommissionAmount = math.floor(Cost * .4);
+                local Saved = Cost - GroupCommissionAmount;
+                local Name = info.Name or '?';
+
+                print(Name, Cost, GroupCommissionAmount, Saved, info);
+
+                InfoText:set(string.format(INFO_TEXT_FORMAT, Name, Cost, GroupCommissionAmount, Saved));
+            else
+                InfoText:set('You will not save 40% on UGC items. Use an item uploaded by the Roblox account.');
+            end;
+        else
+            InfoText:set('Invalid item.');
+        end;
     end);
 
     return New "Frame" {
@@ -49,9 +81,9 @@ local function Scene(props)
 
         [Children] = {
             New "TextBox" {
-                Position = UDim2.fromScale(.5, .35);
-                Size = UDim2.fromScale(.65, .1);
-                AnchorPoint = Vector2.new(.5, .5);
+                Position = UDim2.fromScale(.9, .35);
+                Size = UDim2.fromScale(.5, .1);
+                AnchorPoint = Vector2.new(1, .5);
                 BackgroundColor3 = Color3.fromRGB(231, 231, 231);
                 BorderColor3 = Color3.fromRGB(204, 204, 204);
                 BorderSizePixel = 3;
@@ -93,15 +125,53 @@ local function Scene(props)
                 TextColor3 = Color3.fromRGB(255, 0, 0);
             };
 
-            New "TextButton" {
-                Position = UDim2.fromScale(.5, .6);
-                Size = UDim2.fromScale(.35, .125);
+            New "TextLabel" {
+                Position = UDim2.fromScale(.2, .7);
+                Size = UDim2.fromScale(.3, .3);
                 AnchorPoint = Vector2.new(.5, .5);
+                BackgroundTransparency = 1;
+                Name = 'InfoText';
+                Font = Enum.Font.Cartoon;
+                Text = Computed(function()
+                    return InfoText:get();
+                end);
+                TextScaled = true;
+                TextColor3 = Color3.fromRGB(255, 255, 255);
+            };
+
+            New "TextLabel" {
+                Position = UDim2.fromScale(.5, 1);
+                Size = UDim2.fromScale(1, .08);
+                AnchorPoint = Vector2.new(.5, 1);
+                BackgroundTransparency = 1;
+                Name = 'Disclaimer';
+                Font = Enum.Font.Cartoon;
+                Text = 'Note: The "Discount" number will be sent to your group funds. When you purchase the item it will show as the original price, and you will pay the original price.';
+                TextScaled = true;
+                TextColor3 = Color3.fromRGB(95, 231, 255);
+            };
+
+            New "ImageLabel" {
+                Position = UDim2.fromScale(.2, .35);
+                Size = UDim2.fromScale(.3, .3);
+                AnchorPoint = Vector2.new(.5, .5);
+                BackgroundTransparency = 1;
+                Image = Computed(function()
+                    return ('rbxthumb://type=Asset&id=%d&w=420&h=420'):format(PurchaseValue:get() or 0);
+                end);
+                ScaleType = Enum.ScaleType.Fit;
+            };
+
+            New "TextButton" {
+                Position = UDim2.fromScale(.9, .6);
+                Size = UDim2.fromScale(.35, .125);
+                AnchorPoint = Vector2.new(1, .5);
                 BackgroundColor3 = Color3.fromRGB(30, 255, 0);
                 BorderColor3 = Color3.fromRGB(37, 219, 0);
                 BorderSizePixel = 3;
                 BorderMode = Enum.BorderMode.Outline;
                 Font = Enum.Font.Cartoon;
+                Name = 'PurchaseBtn';
                 Text = 'Purchase';
                 TextScaled = true;
     
@@ -110,7 +180,6 @@ local function Scene(props)
                     local Done, Return = pcall(function()
                         local ID = PurchaseValue:get();
                         local info = Info:get();
-                        print(info)
                         
                         assert(info ~= nil, 'This is not a valid item.');
                         assert(info.Creator.Id == 1, 'Item must be uploaded by Roblox.');
