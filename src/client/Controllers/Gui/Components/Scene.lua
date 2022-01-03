@@ -18,10 +18,14 @@ local Spring = Fusion.Spring;
 local Signal = require(Knit.Util.Signal);
 
 local function Scene(props)
+    local GuiController = Knit.GetController'GuiController';
     local OnInput = Signal.new();
 
     local PurchaseValue = State(0);
     local Purchases = State(0);
+    local Info = State(nil);
+    local Mode = State(0);
+    local ErrText = State'';
 
     OnInput:Connect(function(New: number)
         if (not New) then
@@ -29,6 +33,10 @@ local function Scene(props)
         end;
 
         PurchaseValue:set(New);
+        
+        local info = MarketplaceService:GetProductInfo(New);
+        print(info);
+        Info:set(info);
     end);
 
     return New "Frame" {
@@ -65,6 +73,24 @@ local function Scene(props)
 
                     OnInput:Fire(New);
                 end;
+
+                [OnEvent "Focused"] = function()
+                    ErrText:set'';
+                end;
+            };
+
+            New "TextLabel" {
+                Position = UDim2.fromScale(.5, .1);
+                Size = UDim2.fromScale(1, .1);
+                AnchorPoint = Vector2.new(.5, .5);
+                BackgroundTransparency = 1;
+                Name = 'Err';
+                Font = Enum.Font.Cartoon;
+                Text = Computed(function()
+                    return ErrText:get();
+                end);
+                TextScaled = true;
+                TextColor3 = Color3.fromRGB(255, 0, 0);
             };
 
             New "TextButton" {
@@ -80,8 +106,36 @@ local function Scene(props)
                 TextScaled = true;
     
                 [OnEvent "Activated"] = function()
-                    local ID = PurchaseValue:get();
-                    MarketplaceService:PromptPurchase(game.Players.LocalPlayer, tonumber(ID));
+                    GuiController:Play'click';
+                    local Done, Return = pcall(function()
+                        local ID = PurchaseValue:get();
+                        local info = Info:get();
+                        print(info)
+                        
+                        assert(info ~= nil, 'This is not a valid item.');
+                        assert(info.Creator.Id == 1, 'Item must be uploaded by Roblox.');
+                        assert(info.IsForSale == true, 'This item is not on sale.');
+
+                        local PurchaseDone, Err = pcall(
+                            MarketplaceService.PromptPurchase,
+                            MarketplaceService,
+                            game.Players.LocalPlayer,
+                            tonumber(ID)
+                        );
+
+                        assert(PurchaseDone == true, 'This is not a valid item.');
+                    end);
+
+                    if (not Done) then
+                        warn('Failed!', Return);
+                        if (Return and type(Return) == 'string') then
+                            -- this is gross, i want to remove the traceback.
+                            -- i split it to get the traceback, then remove it using gsub.
+                            local SplitText = Return:split(' ');
+                            ErrText:set(Return:gsub(SplitText[1], ''));
+                        end;
+                        
+                    end;
                 end;
             };
         };
