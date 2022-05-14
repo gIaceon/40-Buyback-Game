@@ -50,7 +50,7 @@ local function Scene(props)
         Info:set(info);
 
         if (info) then
-            if (info.Creator and info.Creator.Id == 1) then
+            -- if (info.Creator and info.Creator.Id == 1) then
                 if (info.IsLimited or info.IsLimitedUnique) then
                     InfoText:set('You cannot buy limited items in game.');
                     return;
@@ -60,12 +60,16 @@ local function Scene(props)
                 local Saved = Cost - GroupCommissionAmount;
                 local Name = info.Name or '?';
 
+                if (info.Creator and info.Creator.Id ~= 1) then
+                    Name = Name..' <b>(NOTE: THIS MAY NOT WORK AS IT IS UGC!)</b>'
+                end;
+
                 print(Name, Cost, GroupCommissionAmount, Saved, info);
 
                 InfoText:set(string.format(INFO_TEXT_FORMAT, Name, Cost, GroupCommissionAmount, Saved));
-            else
-                InfoText:set('You will not save 40% on UGC items. Use an item uploaded by the Roblox account to save 40%. You can still buy UGC items, though.');
-            end;
+            -- else
+                -- InfoText:set('You will not save 40% on UGC items. Use an item uploaded by the Roblox account to save 40%. You can still buy UGC items, though.');
+            -- end;
         else
             InfoText:set('Invalid item.');
         end;
@@ -131,6 +135,7 @@ local function Scene(props)
                 AnchorPoint = Vector2.new(.5, .5);
                 BackgroundTransparency = 1;
                 Name = 'InfoText';
+                RichText = true;
                 Font = Enum.Font.Cartoon;
                 Text = Computed(function()
                     return InfoText:get();
