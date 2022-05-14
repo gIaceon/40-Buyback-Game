@@ -64,7 +64,7 @@ local function Scene(props)
 
                 InfoText:set(string.format(INFO_TEXT_FORMAT, Name, Cost, GroupCommissionAmount, Saved));
             else
-                InfoText:set('You will not save 40% on UGC items. Use an item uploaded by the Roblox account.');
+                InfoText:set('You will not save 40% on UGC items. Use an item uploaded by the Roblox account to save 40%. You can still buy UGC items, though.');
             end;
         else
             InfoText:set('Invalid item.');
@@ -182,7 +182,7 @@ local function Scene(props)
                         local info = Info:get();
                         
                         assert(info ~= nil, 'This is not a valid item.');
-                        assert(info.Creator.Id == 1, 'Item must be uploaded by Roblox.');
+                        -- assert(info.Creator.Id == 1, 'Item must be uploaded by Roblox.');
                         assert(info.IsForSale == true, 'This item is not on sale.');
 
                         local PurchaseDone, Err = pcall(
