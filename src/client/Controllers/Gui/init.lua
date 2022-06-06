@@ -4,10 +4,7 @@ local StarterGui = game:GetService('StarterGui');
 local ContentProvider = game:GetService('ContentProvider');
 
 local Knit = require(ReplicatedStorage:WaitForChild("Knit"));
-local Fusion = require(ReplicatedStorage.Fusion);
-
-local New = Fusion.New;
-local Children = Fusion.Children;
+local Roact = require(ReplicatedStorage.roact);
 
 local GuiController = Knit.CreateController { Name = "GuiController" };
 
@@ -21,15 +18,16 @@ function GuiController:Play(Name: string)
 end;
 
 function GuiController:KnitStart()
-    self.Gui = New "ScreenGui" {
-        Parent = game.Players.LocalPlayer.PlayerGui;
-        Name = "BasicGui";
-        IgnoreGuiInset = true;
+    self.Gui = Roact.createElement(
+        self.Components.App, {
+            Components = self.Components;
+        }
+    );
 
-        [Children] = {
-            self.Components.Scene {};
-        };
-    };
+    self.Mount = Roact.mount(
+        self.Gui,
+        game.Players.LocalPlayer.PlayerGui
+    )
 end;
 
 
@@ -63,7 +61,9 @@ function GuiController:KnitInit()
     end;
 
     for _, CompModule: ModuleScript in ipairs(script:WaitForChild('Components'):GetChildren()) do
-        self.Components[CompModule.Name] = require(CompModule);
+        if (not CompModule.Name:find('.old')) then
+            self.Components[CompModule.Name] = require(CompModule);
+        end;
     end;
 
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false);
