@@ -12,6 +12,10 @@ local Roact = require(ReplicatedStorage.roact);
 local RoactSpring = require(ReplicatedStorage["roact-spring"]);
 local Janitor = require(ReplicatedStorage.Janitor);
 local Signal = require(ReplicatedStorage.Signal);
+local Switch = require(ReplicatedStorage.Switch);
+local Case, Default = Switch.Case, Switch.Default;
+
+local INFO_TYPE = Enum.InfoType:GetEnumItems();
 
 local Scene = Roact.Component:extend('Scene');
 
@@ -44,7 +48,6 @@ function Scene:render()
             if (Num == nil) then
                 return;
             end;
-            print('setting');
 
             self.onInput:Fire(Num)
           end;
@@ -133,12 +136,31 @@ function Scene:render()
                 -- assert(info.Creator.Id == 1, 'Item must be uploaded by Roblox.');
                 assert(info.IsForSale == true, 'This item is not on sale.');
 
-                local PurchaseDone, Err = pcall(
-                    MarketplaceService.PromptPurchase,
-                    MarketplaceService,
-                    game.Players.LocalPlayer,
-                    tonumber(ID)
-                );
+                -- local PurchaseDone, Err = pcall(
+                --     MarketplaceService.PromptPurchase,
+                --     MarketplaceService,
+                --     game.Players.LocalPlayer,
+                --     tonumber(ID)
+                -- );
+                local PurchaseDone, Err;
+                Switch(INFO_TYPE[self.mode:getValue()]) {
+                  [Case {Enum.InfoType.Asset}] = function()
+                    PurchaseDone, Err = pcall(
+                        MarketplaceService.PromptPurchase,
+                        MarketplaceService,
+                        game.Players.LocalPlayer,
+                        tonumber(ID)
+                    );
+                  end;
+                  [Case {Enum.InfoType.Bundle}] = function()
+                    PurchaseDone, Err = pcall(
+                        MarketplaceService.PromptBundlePurchase,
+                        MarketplaceService,
+                        game.Players.LocalPlayer,
+                        tonumber(ID)
+                    );
+                  end;
+                }
 
                 assert(PurchaseDone == true, 'This is not a valid item.');
             end);
@@ -169,6 +191,10 @@ function Scene:init(props)
     self.infotxt, self.changeInfotxt = Roact.createBinding'';
     self.info, self.setInfo = Roact.createBinding{};
     self.onInput = Signal.new();
+
+    print(INFO_TYPE);
+
+    self.mode, self.setMode = Roact.createBinding(1);
 end
 
 function Scene:didMount()
@@ -181,33 +207,33 @@ function Scene:didMount()
         end;
         self.changeAsset(New);
 
-        local done, returned = pcall(MarketplaceService.GetProductInfo, MarketplaceService, New);
+        local infoType = INFO_TYPE[self.mode:getValue()];
+
+        local done, returned = pcall(MarketplaceService.GetProductInfo, MarketplaceService, New, infoType);
         local info = if done ~= false then returned else nil;
 
         self.setInfo(info);
         if (info) then
-            -- if (info.Creator and info.Creator.Id == 1) then
-                if (info.IsLimited or info.IsLimitedUnique) then
-                    -- InfoText:set('You cannot buy limited items in game.');
-                    self.changeInfotxt('You cannot buy limited items in game.');
-                    return;
-                end;
-                local Cost = info.PriceInRobux or 0;
-                local GroupCommissionAmount = math.floor(Cost * .4);
-                local Saved = Cost - GroupCommissionAmount;
-                local Name = info.Name or '?';
+          if (infoType == Enum.InfoType.Bundle) then
+            self.changeInfotxt(info.Name..'\n'..info.Description);
+            return;
+          end;
+              if (info.IsLimited or info.IsLimitedUnique) then
+                  self.changeInfotxt('You cannot buy limited items in game.');
+                  return;
+              end;
+              local Cost = info.PriceInRobux or 0;
+              local GroupCommissionAmount = math.floor(Cost * .4);
+              local Saved = Cost - GroupCommissionAmount;
+              local Name = info.Name or '?';
 
-                if (info.Creator and info.Creator.Id ~= 1) then
-                    -- Name = Name..' <b>(NOTE: THIS MAY NOT WORK AS IT IS UGC!)</b>'
-                end;
+              if (info.Creator and info.Creator.Id ~= 1) then
+                  -- Name = Name..' <b>(NOTE: THIS MAY NOT WORK AS IT IS UGC!)</b>'
+              end;
 
-                print(Name, Cost, GroupCommissionAmount, Saved, info);
+              print(Name, Cost, GroupCommissionAmount, Saved, info);
 
-                -- InfoText:set(string.format(INFO_TEXT_FORMAT, Name, Cost, GroupCommissionAmount, Saved));
-                self.changeInfotxt(string.format(INFO_TEXT_FORMAT, Name, Cost, GroupCommissionAmount, Saved))
-            -- else
-                -- InfoText:set('You will not save 40% on UGC items. Use an item uploaded by the Roblox account to save 40%. You can still buy UGC items, though.');
-            -- end;
+              self.changeInfotxt(string.format(INFO_TEXT_FORMAT, Name, Cost, GroupCommissionAmount, Saved));
         else
             self.changeInfotxt('Invalid item.');
         end;
